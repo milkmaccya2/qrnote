@@ -46,15 +46,17 @@ class MockMediaRecorder {
 global.MediaRecorder = MockMediaRecorder as unknown as typeof MediaRecorder;
 
 describe('useCameraCapture', () => {
+  const mockTrack = { stop: vi.fn() };
   const mockStream = {
-    getTracks: vi.fn().mockReturnValue([
-      { stop: vi.fn() }
-    ])
+    getTracks: vi.fn().mockReturnValue([mockTrack])
   } as unknown as MediaStream;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetUserMedia.mockResolvedValue(mockStream);
+    mockTrack.stop.mockClear();
+    mockStream.getTracks.mockClear();
+    mockStream.getTracks.mockReturnValue([mockTrack]);
   });
 
   afterEach(() => {
@@ -158,17 +160,26 @@ describe('useCameraCapture', () => {
       await result.current.startCamera();
     });
 
+    // キャンバスのモックを確実に設定
+    mockCanvas.getContext.mockReturnValue(mockCanvasContext);
+    
     // toBlob をモック
     const mockBlob = new Blob(['test'], { type: 'image/jpeg' });
-    mockCanvas.toBlob.mockImplementation((callback: BlobCallback) => {
-      callback(mockBlob);
+    mockCanvas.toBlob.mockImplementation((callback: BlobCallback | null) => {
+      if (callback) {
+        callback(mockBlob);
+      }
     });
 
     // 写真撮影
+    let captureResult: Blob | null = null;
     await act(async () => {
-      await result.current.capturePhoto();
+      captureResult = await result.current.capturePhoto();
     });
 
+    // キャンバスの設定を確認
+    expect(mockCanvas.width).toBe(640);
+    expect(mockCanvas.height).toBe(480);
     expect(mockCanvasContext.drawImage).toHaveBeenCalledWith(
       mockVideoElement,
       0,
@@ -177,6 +188,7 @@ describe('useCameraCapture', () => {
       480
     );
     expect(onCapture).toHaveBeenCalledWith(mockBlob);
+    expect(captureResult).toBe(mockBlob);
   });
 
   it('カメラが起動していない状態で撮影するとエラーになる', async () => {

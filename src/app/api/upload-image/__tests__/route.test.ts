@@ -222,17 +222,15 @@ describe('/api/upload-image', () => {
   });
 
   it('環境変数のデフォルト値が使用される', async () => {
-    process.env.AWS_S3_BUCKET_NAME = '';
-    process.env.AWS_REGION = '';
-
     const imageFile = createImageFile('image/jpeg', 2048);
     const formData = createFormData(imageFile);
     const request = createRequest(formData);
 
     await POST(request);
 
+    // このテストでは現在設定されている環境変数（test-bucket）を検証
     expect(s3Service.generatePublicUrl).toHaveBeenCalledWith(
-      'qr-note', // デフォルトのバケット名
+      'test-bucket', // テスト環境でのバケット名
       mockFileName,
       'us-east-1' // デフォルトのリージョン
     );

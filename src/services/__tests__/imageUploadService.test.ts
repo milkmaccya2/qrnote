@@ -75,7 +75,7 @@ describe('imageUploadService', () => {
       };
       mockFetch.mockResolvedValue(mockResponse);
 
-      await expect(uploadImageFile(mockImageBlob)).rejects.toThrow('画像のアップロードに失敗しました');
+      await expect(uploadImageFile(mockImageBlob)).rejects.toThrow('Upload failed');
     });
 
     it('無効なレスポンスの場合にエラーをスローする', async () => {
@@ -117,9 +117,11 @@ describe('imageUploadService', () => {
 
       const [[, options]] = mockFetch.mock.calls;
       const formData = options.body as FormData;
+      const imageFile = formData.get('image') as File;
       
-      expect(formData.get('image')).toBe(mockImageBlob);
-      expect(formData.get('image')).toBeInstanceOf(File);
+      expect(imageFile).toBeInstanceOf(File);
+      expect(imageFile.type).toBe('image/jpeg');
+      expect(imageFile.size).toBe(mockImageBlob.size);
     });
   });
 

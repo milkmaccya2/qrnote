@@ -14,7 +14,8 @@ QRノート：スマホとPCのちょっとした橋渡し
 - **PWA**: next-pwa
 - **QRコード生成**: qrcode ライブラリ
 - **音声機能**: Web Speech API, MediaRecorder API
-- **クラウドストレージ**: AWS S3 (音声ファイル保存)
+- **クラウドストレージ**: AWS S3 (音声・画像ファイル保存)
+- **カメラ機能**: MediaDevices API (写真撮影)
 - **テスト**: Vitest, React Testing Library
 
 ## プロジェクト構造
@@ -26,21 +27,29 @@ src/
 │   │   ├── __tests__/
 │   │   │   └── route.test.ts      # API ルートテスト
 │   │   └── route.ts
+│   ├── api/upload-image/          # S3画像ファイルアップロードAPI
+│   │   ├── __tests__/
+│   │   │   └── route.test.ts      # API ルートテスト
+│   │   └── route.ts
 │   └── page.tsx                   # メインページ
 ├── hooks/                         # カスタムフック
 │   ├── __tests__/
 │   │   ├── useAudioRecording.test.ts    # 音声録音フックテスト
+│   │   ├── useCameraCapture.test.ts     # カメラ撮影フックテスト
 │   │   └── useQRCodeGeneration.test.ts  # QRコード生成フックテスト
 │   ├── useHistory.ts              # 履歴管理
 │   ├── useSpeechRecognition.ts    # Web Speech API
 │   ├── useAudioRecording.ts       # 音声録音・S3アップロード
+│   ├── useCameraCapture.ts        # カメラ撮影・画像処理
 │   └── useQRCodeGeneration.ts     # QRコード生成
 ├── services/                      # サービス層
 │   ├── __tests__/
 │   │   ├── audioUploadService.test.ts   # 音声アップロードサービステスト
+│   │   ├── imageUploadService.test.ts   # 画像アップロードサービステスト
 │   │   └── s3Service.test.ts           # S3サービステスト
 │   ├── s3Service.ts               # AWS S3操作
-│   └── audioUploadService.ts      # 音声アップロード処理
+│   ├── audioUploadService.ts      # 音声アップロード処理
+│   └── imageUploadService.ts      # 画像アップロード処理
 ├── test/
 │   └── setup.ts                   # テスト環境セットアップ
 ├── types/
@@ -68,7 +77,14 @@ src/
 - 24時間自動削除設定
 - QRコード化してデバイス間共有
 
-### 4. 履歴管理
+### 4. カメラ撮影・画像アップロード
+- MediaDevices API使用
+- 写真撮影機能
+- 前面・背面カメラ切り替え
+- AWS S3への自動アップロード
+- 画像URL QRコード化
+
+### 5. 履歴管理
 - ローカルストレージ使用
 - 最大10件保存
 - 重複排除機能
@@ -193,8 +209,9 @@ vercel env add AWS_S3_BUCKET_NAME
 
 ## 今後の拡張予定
 
-- [ ] カメラ機能（QRコード読み取り）
-- [ ] 画像ファイルのS3アップロード対応
+- [x] カメラ機能（写真撮影）
+- [x] 画像ファイルのS3アップロード対応
+- [ ] QRコード読み取り機能
 - [ ] ユーザー認証
 - [ ] QRコードデザインカスタマイズ
 - [ ] 共有機能
