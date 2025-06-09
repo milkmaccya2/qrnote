@@ -1,0 +1,26 @@
+{
+  "name": "QRノート - スマホとPCの橋渡し",
+  "short_name": "QRノート",
+  "description": "テキストやURLを簡単にQRコード化。PCで入力してスマホで読み取り、またはその逆も！",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3B82F6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "lang": "ja"
+}

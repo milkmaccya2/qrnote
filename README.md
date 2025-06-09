@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📱 QRノート
 
-## Getting Started
+スマホとPCのちょっとした橋渡しアプリ
 
-First, run the development server:
+## 💡 なにができる？
+
+- **QRコード生成**: テキストやURLを即座にQRコード化
+- **クロスデバイス**: PCで打ってスマホで読み取り、またはその逆も
+- **履歴機能**: 過去10件の生成履歴を自動保存
+- **PWA対応**: ホーム画面に追加してネイティブアプリのように使用可能
+- **オフライン動作**: ネット接続なしでも基本機能が利用可能
+
+## 🔧 技術要素
+
+- **フロントエンド**: Next.js 15 + React 19
+- **スタイリング**: Tailwind CSS
+- **QRコード生成**: qrcode (日本語完全対応)
+- **PWA**: next-pwa (Service Worker + Workbox)
+- **TypeScript**: 型安全な開発環境
+
+## 🚀 クイックスタート
+
+### 開発環境
 
 ```bash
+# 依存関係インストール
+npm install
+
+# 開発サーバー起動
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+[http://localhost:3000](http://localhost:3000) でアクセス
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### プロダクション
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# ビルド
+npm run build
 
-## Learn More
+# プロダクション起動
+npm start
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 📦 主要依存関係
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `next` - React フレームワーク
+- `qrcode` - QRコード生成ライブラリ
+- `next-pwa` - PWA サポート
+- `tailwindcss` - ユーティリティファーストCSS
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🌐 デプロイ
 
-## Deploy on Vercel
+### Vercel (推奨)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+# Vercel CLI でデプロイ
+npx vercel
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### その他のプラットフォーム
+
+- Netlify
+- AWS Amplify
+- Railway
+- 任意のNode.js対応ホスティング
+
+## 📱 PWA として使用
+
+1. スマホでサイトにアクセス
+2. ブラウザメニューから「ホーム画面に追加」
+3. ネイティブアプリのように起動可能
+
+## 🛠️ 開発
+
+### プロジェクト構造
+
+```
+src/
+├── app/
+│   ├── layout.tsx    # レイアウト設定
+│   ├── page.tsx      # メインページ
+│   └── globals.css   # グローバルスタイル
+public/
+├── manifest.json     # PWAマニフェスト
+├── icon-*.png        # アプリアイコン
+└── sw.js            # Service Worker (自動生成)
+```
+
+### カスタマイズ
+
+- `src/app/page.tsx`: UI とロジック
+- `public/manifest.json`: PWA設定
+- `tailwind.config.js`: スタイル設定
+
+## 📄 ライセンス
+
+MIT License
