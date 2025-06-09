@@ -12,12 +12,54 @@ interface HistoryItem {
 export default function Home() {
   const [inputText, setInputText] = useState('');
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [isListening, setIsListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('qrnote-history');
     if (savedHistory) {
       setHistory(JSON.parse(savedHistory));
+    }
+
+    // Web Speech API サポート確認
+    if (typeof window !== 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        setSpeechSupported(true);
+        
+        // 音声認識の初期化
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'ja-JP'; // 日本語設定
+        
+        recognition.onstart = () => {
+          setIsListening(true);
+        };
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        recognition.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          setInputText(transcript);
+          setIsListening(false);
+        };
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        recognition.onerror = (event: any) => {
+          console.error('音声認識エラー:', event.error);
+          setIsListening(false);
+        };
+        
+        recognition.onend = () => {
+          setIsListening(false);
+        };
+        
+        recognitionRef.current = recognition;
+      }
     }
   }, []);
 
@@ -44,6 +86,18 @@ export default function Home() {
   const clearHistory = () => {
     setHistory([]);
     localStorage.removeItem('qrnote-history');
+  };
+
+  const startListening = () => {
+    if (recognitionRef.current && speechSupported) {
+      recognitionRef.current.start();
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current && isListening) {
+      recognitionRef.current.stop();
+    }
   };
 
   const currentQRValue = inputText.trim() || 'QRノートへようこそ！';
@@ -97,14 +151,53 @@ export default function Home() {
 
         <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 mb-8 shadow-2xl">
           <div className="mb-6">
-            <textarea
-              id="input-text"
-              className="w-full p-4 bg-white/90 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-cyan-400 focus:outline-none resize-none text-slate-800 placeholder-slate-500 shadow-inner"
-              rows={3}
-              placeholder="✨ Enter text or URL to generate QR code..."
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-            />
+            <div className="relative">
+              <textarea
+                id="input-text"
+                className="w-full p-4 pr-14 bg-white/90 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-cyan-400 focus:outline-none resize-none text-slate-800 placeholder-slate-500 shadow-inner"
+                rows={3}
+                placeholder="✨ Enter text or URL to generate QR code..."
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+              />
+              
+              {/* 音声入力ボタン */}
+              {speechSupported && (
+                <button
+                  onClick={isListening ? stopListening : startListening}
+                  className={`absolute right-3 top-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    isListening 
+                      ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
+                      : 'bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600'
+                  } text-white shadow-lg`}
+                  title={isListening ? '音声認識を停止' : '音声入力を開始'}
+                >
+                  {isListening ? (
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M6 6h12v12H6z"/>
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+                    </svg>
+                  )}
+                </button>
+              )}
+            </div>
+            
+            {/* 音声認識の状態表示 */}
+            {isListening && (
+              <div className="mt-3 flex items-center gap-2 text-white/80 text-sm">
+                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                <span>音声を認識中...</span>
+              </div>
+            )}
+            
+            {!speechSupported && (
+              <div className="mt-3 text-white/60 text-xs">
+                ⚠️ このブラウザは音声認識をサポートしていません
+              </div>
+            )}
           </div>
           
           <button
