@@ -1,6 +1,7 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { AWSError } from '@/types';
+import { getAWSConfig } from '@/lib/env';
 
 /**
  * S3クライアントを作成する
@@ -8,11 +9,13 @@ import type { AWSError } from '@/types';
  * @returns 設定されたS3クライアント
  */
 export function createS3Client() {
+  const awsConfig = getAWSConfig();
+  
   return new S3Client({
-    region: process.env.AWS_REGION || 'us-east-1',
+    region: awsConfig.region,
     credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+      accessKeyId: awsConfig.accessKeyId,
+      secretAccessKey: awsConfig.secretAccessKey,
     },
   });
 }
@@ -91,9 +94,11 @@ export async function generateSignedUrl(
 export function generatePublicUrl(
   bucketName: string,
   fileName: string,
-  region: string = 'us-east-1'
+  region?: string
 ): string {
-  return `https://${bucketName}.s3.${region}.amazonaws.com/${fileName}`;
+  const awsConfig = getAWSConfig();
+  const s3Region = region || awsConfig.region;
+  return `https://${bucketName}.s3.${s3Region}.amazonaws.com/${fileName}`;
 }
 
 /**
@@ -105,8 +110,8 @@ export function generatePublicUrl(
 export function getAWSErrorDetails(error: unknown): {
   message: string;
   name: string;
-  code?: string;
-  statusCode?: number;
+  code?: string | undefined;
+  statusCode?: number | undefined;
 } {
   const awsError = error as AWSError;
   return {

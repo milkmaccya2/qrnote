@@ -46,8 +46,11 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
         };
         
         recognition.onresult = (event: SpeechRecognitionEvent) => {
-          const transcript = event.results[0][0].transcript;
-          onResult?.(transcript);
+          const result = event.results[0]?.[0];
+          if (result) {
+            const transcript = result.transcript;
+            onResult?.(transcript);
+          }
           setIsListening(false);
         };
         

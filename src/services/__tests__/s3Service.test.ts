@@ -45,14 +45,15 @@ describe('s3Service', () => {
       })
     })
 
-    it('should use default values when environment variables are not set', () => {
+    it('should use environment configuration from getAWSConfig', () => {
+      // 前のテストでap-northeast-1に変更されているため、その値が使われる
       createS3Client()
 
       expect(S3Client).toHaveBeenCalledWith({
-        region: 'us-east-1',
+        region: 'ap-northeast-1', // 前のテストで設定された値
         credentials: {
-          accessKeyId: '',
-          secretAccessKey: ''
+          accessKeyId: 'test-access-key',
+          secretAccessKey: 'test-secret-key'
         }
       })
     })
@@ -171,9 +172,10 @@ describe('s3Service', () => {
   })
 
   describe('generatePublicUrl', () => {
-    it('should generate public URL with default region', () => {
+    it('should generate public URL with environment region', () => {
+      // 前のテストでAWS_REGION='ap-northeast-1'に変更されている
       const url = generatePublicUrl('test-bucket', 'test-file.webm')
-      expect(url).toBe('https://test-bucket.s3.us-east-1.amazonaws.com/test-file.webm')
+      expect(url).toBe('https://test-bucket.s3.ap-northeast-1.amazonaws.com/test-file.webm')
     })
 
     it('should generate public URL with custom region', () => {

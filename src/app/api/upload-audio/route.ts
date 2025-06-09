@@ -7,12 +7,13 @@ import {
   generatePublicUrl,
   getAWSErrorDetails
 } from '@/services/s3Service';
-
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'qr-note';
-const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
+import { getAWSConfig } from '@/lib/env';
 
 export async function POST(request: NextRequest) {
   try {
+    // 環境変数を安全に取得
+    const awsConfig = getAWSConfig();
+    
     // バリデーション: Content-Type チェック
     const contentType = request.headers.get('content-type');
     if (!contentType?.includes('multipart/form-data')) {
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     // S3にアップロード
     await uploadToS3(
       s3Client,
-      BUCKET_NAME,
+      awsConfig.bucketName,
       fileName,
       buffer,
       audioFile.type || 'audio/webm'
@@ -71,8 +72,8 @@ export async function POST(request: NextRequest) {
 
     // URLを生成
     const [signedUrl, publicUrl] = await Promise.all([
-      generateSignedUrl(s3Client, BUCKET_NAME, fileName),
-      Promise.resolve(generatePublicUrl(BUCKET_NAME, fileName, AWS_REGION))
+      generateSignedUrl(s3Client, awsConfig.bucketName, fileName),
+      Promise.resolve(generatePublicUrl(awsConfig.bucketName, fileName, awsConfig.region))
     ]);
 
     return NextResponse.json({
@@ -87,13 +88,14 @@ export async function POST(request: NextRequest) {
     console.error('Upload error:', error);
     
     const errorDetails = getAWSErrorDetails(error);
+    const awsConfig = getAWSConfig(); // catch文でも環境変数を取得
     
     return NextResponse.json({ 
       error: 'Upload failed',
       details: {
         ...errorDetails,
-        region: AWS_REGION,
-        bucket: BUCKET_NAME,
+        region: awsConfig.region,
+        bucket: awsConfig.bucketName,
       }
     }, { status: 500 });
   }
