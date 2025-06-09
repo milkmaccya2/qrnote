@@ -70,7 +70,9 @@ export async function POST(request: NextRequest) {
     const errorDetails = {
       message: error instanceof Error ? error.message : 'Unknown error',
       name: error instanceof Error ? error.name : 'Unknown',
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       code: (error as any)?.code,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       statusCode: (error as any)?.statusCode,
       region: process.env.AWS_REGION,
       bucket: BUCKET_NAME,
