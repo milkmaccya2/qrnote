@@ -10,7 +10,7 @@ const s3Client = new S3Client({
   },
 });
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'qrnote-audio-files';
+const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || 'qr-note';
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,9 +65,20 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Upload error:', error);
+    
+    // デバッグ用の詳細エラー情報
+    const errorDetails = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      name: error instanceof Error ? error.name : 'Unknown',
+      code: (error as any)?.code,
+      statusCode: (error as any)?.statusCode,
+      region: process.env.AWS_REGION,
+      bucket: BUCKET_NAME,
+    };
+    
     return NextResponse.json({ 
       error: 'Upload failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: errorDetails
     }, { status: 500 });
   }
 }
