@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
+// AWS SDK エラー型定義
+interface AWSError extends Error {
+  code?: string;
+  statusCode?: number;
+}
+
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || 'us-east-1',
   credentials: {
@@ -67,13 +73,12 @@ export async function POST(request: NextRequest) {
     console.error('Upload error:', error);
     
     // デバッグ用の詳細エラー情報
+    const awsError = error as AWSError;
     const errorDetails = {
       message: error instanceof Error ? error.message : 'Unknown error',
       name: error instanceof Error ? error.name : 'Unknown',
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      code: (error as any)?.code,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      statusCode: (error as any)?.statusCode,
+      code: awsError.code,
+      statusCode: awsError.statusCode,
       region: process.env.AWS_REGION,
       bucket: BUCKET_NAME,
     };
