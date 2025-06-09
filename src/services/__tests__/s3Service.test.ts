@@ -1,4 +1,3 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   createS3Client,
   generateFileName,
@@ -96,7 +95,7 @@ describe('s3Service', () => {
       const buffer = Buffer.from('test audio data')
 
       await uploadToS3(
-        mockS3Client as any,
+        mockS3Client as S3Client,
         'test-bucket',
         'test-file.webm',
         buffer,
@@ -118,7 +117,7 @@ describe('s3Service', () => {
       const buffer = Buffer.from('test')
       const now = Date.now()
 
-      await uploadToS3(mockS3Client as any, 'bucket', 'file', buffer, 'audio/webm')
+      await uploadToS3(mockS3Client as S3Client, 'bucket', 'file', buffer, 'audio/webm')
 
       const call = vi.mocked(PutObjectCommand).mock.calls[0][0]
       const expires = call.Expires as Date
@@ -135,7 +134,7 @@ describe('s3Service', () => {
       vi.mocked(getSignedUrl).mockResolvedValue('https://signed-url.com')
 
       const url = await generateSignedUrl(
-        mockS3Client as any,
+        mockS3Client as S3Client,
         'test-bucket',
         'test-file.webm'
       )
@@ -157,7 +156,7 @@ describe('s3Service', () => {
       vi.mocked(getSignedUrl).mockResolvedValue('https://signed-url.com')
 
       await generateSignedUrl(
-        mockS3Client as any,
+        mockS3Client as S3Client,
         'test-bucket',
         'test-file.webm',
         3600 // 1 hour

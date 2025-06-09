@@ -1,4 +1,3 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useAudioRecording } from '../useAudioRecording'
 
@@ -13,8 +12,8 @@ const mockMediaRecorder = {
   stop: vi.fn(),
   addEventListener: vi.fn(),
   removeEventListener: vi.fn(),
-  ondataavailable: null as any,
-  onstop: null as any,
+  ondataavailable: null as ((event: BlobEvent) => void) | null,
+  onstop: null as ((event: Event) => void) | null,
   state: 'inactive',
 }
 
@@ -132,7 +131,7 @@ describe('useAudioRecording', () => {
       const audioBlob = new Blob(['test'], { type: 'audio/webm' })
       // ondataavailableイベントをシミュレート
       if (mockMediaRecorder.ondataavailable) {
-        mockMediaRecorder.ondataavailable({ data: audioBlob } as any)
+        mockMediaRecorder.ondataavailable({ data: audioBlob } as BlobEvent)
       }
       // onstopイベントをシミュレート
       if (mockMediaRecorder.onstop) {
@@ -166,7 +165,7 @@ describe('useAudioRecording', () => {
     act(() => {
       const audioBlob = new Blob(['test'], { type: 'audio/webm' })
       if (mockMediaRecorder.ondataavailable) {
-        mockMediaRecorder.ondataavailable({ data: audioBlob } as any)
+        mockMediaRecorder.ondataavailable({ data: audioBlob } as BlobEvent)
       }
       if (mockMediaRecorder.onstop) {
         mockMediaRecorder.onstop(new Event('stop'))

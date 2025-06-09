@@ -1,4 +1,3 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { uploadAudioFile, uploadAudioFileWithProgress } from '../audioUploadService'
 
 // fetch をモック
@@ -18,7 +17,7 @@ const mockXHRInstance = {
 }
 
 const mockXHR = vi.fn(() => mockXHRInstance)
-global.XMLHttpRequest = mockXHR as any
+global.XMLHttpRequest = mockXHR as typeof XMLHttpRequest
 
 describe('audioUploadService', () => {
   beforeEach(() => {
