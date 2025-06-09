@@ -166,6 +166,35 @@ npm start
 - [ ] 共有機能
 - [ ] 多言語対応
 
+## コード品質管理
+
+### ESLint設定
+- TypeScript厳密モード有効
+- `@typescript-eslint/no-explicit-any` 禁止（型安全性確保）
+- React Hooks ルール適用
+- Next.js推奨設定
+
+### JSDoc規約
+- 関数：概要、パラメータ、戻り値を簡潔に記載
+- 型定義：インターフェース概要とプロパティ説明
+- カスタムフック：用途とオプション説明
+- 定数：設定の用途を明記
+
+### よくあるESLintエラーと対処法
+
+1. **`@typescript-eslint/no-explicit-any`** → 適切な型定義を作成
+2. **`react-hooks/exhaustive-deps`** → useEffect依存配列を修正
+3. **`@typescript-eslint/no-unused-vars`** → 未使用変数は削除または`_`プレフィックス
+4. **`@typescript-eslint/prefer-nullish-coalescing`** → `||` を `??` に変更
+
+### コードレビューチェックリスト
+
+- [ ] JSDocが適切に記載されている
+- [ ] `any`型を使用していない
+- [ ] useEffectの依存配列が適切
+- [ ] 未使用の変数・インポートがない
+- [ ] ESLintエラーがゼロ
+
 ## トラブルシューティング
 
 ### 音声認識が動作しない
@@ -181,6 +210,18 @@ npm start
 ### ビルドエラー
 - Node.js バージョン確認（18.17以上推奨）
 - 依存関係の再インストール: `rm -rf node_modules package-lock.json && npm install`
+
+### ESLintエラーが大量発生する場合
+```bash
+# 段階的に修正する場合
+npm run lint -- --fix  # 自動修正可能なエラーを修正
+
+# 特定のルールを一時的に無効化（非推奨）
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
+# 型定義不足の場合
+npm install --save-dev @types/node @types/react @types/react-dom
+```
 
 ## コントリビューション
 
