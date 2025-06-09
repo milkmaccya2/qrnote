@@ -23,15 +23,26 @@ QRノート：スマホとPCのちょっとした橋渡し
 src/
 ├── app/
 │   ├── api/upload-audio/          # S3音声ファイルアップロードAPI
+│   │   ├── __tests__/
+│   │   │   └── route.test.ts      # API ルートテスト
+│   │   └── route.ts
 │   └── page.tsx                   # メインページ
 ├── hooks/                         # カスタムフック
+│   ├── __tests__/
+│   │   ├── useAudioRecording.test.ts    # 音声録音フックテスト
+│   │   └── useQRCodeGeneration.test.ts  # QRコード生成フックテスト
 │   ├── useHistory.ts              # 履歴管理
 │   ├── useSpeechRecognition.ts    # Web Speech API
 │   ├── useAudioRecording.ts       # 音声録音・S3アップロード
 │   └── useQRCodeGeneration.ts     # QRコード生成
 ├── services/                      # サービス層
+│   ├── __tests__/
+│   │   ├── audioUploadService.test.ts   # 音声アップロードサービステスト
+│   │   └── s3Service.test.ts           # S3サービステスト
 │   ├── s3Service.ts               # AWS S3操作
 │   └── audioUploadService.ts      # 音声アップロード処理
+├── test/
+│   └── setup.ts                   # テスト環境セットアップ
 ├── types/
 │   └── index.ts                   # TypeScript型定義
 └── constants/
@@ -78,11 +89,14 @@ npm start
 # リンター実行
 npm run lint
 
-# テスト実行
+# テスト実行（ウォッチモード）
 npm test
 
-# テスト（ウォッチモード）
-npm run test:watch
+# テスト実行（1回のみ）
+npm run test:run
+
+# テストUI表示
+npm run test:ui
 
 # テストカバレッジ
 npm run test:coverage
@@ -156,6 +170,7 @@ npm start
 - **サービス層**: API呼び出しとビジネスロジックの分離
 - **型安全性**: 厳密なTypeScript型定義
 - **PWA対応**: オフライン機能、ホーム画面追加可能
+- **テスト駆動**: Vitest + React Testing Library による包括的テストカバレッジ
 
 ## 今後の拡張予定
 
@@ -187,6 +202,13 @@ npm start
 3. **`@typescript-eslint/no-unused-vars`** → 未使用変数は削除または`_`プレフィックス
 4. **`@typescript-eslint/prefer-nullish-coalescing`** → `||` を `??` に変更
 
+### テスト戦略
+
+- **単体テスト**: カスタムフック、サービス層、API ルートをテスト
+- **モック**: AWS S3、fetch、Web API のモック
+- **テスト環境**: happy-dom を使用した軽量DOM環境
+- **カバレッジ**: 主要機能の網羅的テスト
+
 ### コードレビューチェックリスト
 
 - [ ] JSDocが適切に記載されている
@@ -194,6 +216,7 @@ npm start
 - [ ] useEffectの依存配列が適切
 - [ ] 未使用の変数・インポートがない
 - [ ] ESLintエラーがゼロ
+- [ ] テストが作成され、パスしている
 
 ## トラブルシューティング
 
