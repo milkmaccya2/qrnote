@@ -1,4 +1,4 @@
-/// <reference types="vitest" />
+import 'vitest'
 import type { TestAPI } from 'vitest'
 
 declare global {
