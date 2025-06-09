@@ -14,9 +14,13 @@ export default function Home() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [isListening, setIsListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     const savedHistory = localStorage.getItem('qrnote-history');
@@ -100,6 +104,78 @@ export default function Home() {
     }
   };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
+      
+      audioChunksRef.current = [];
+      
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await uploadAudioFile(audioBlob);
+        
+        // ストリームを停止
+        stream.getTracks().forEach(track => track.stop());
+      };
+      
+      mediaRecorder.start();
+      mediaRecorderRef.current = mediaRecorder;
+      setIsRecording(true);
+      
+    } catch (error) {
+      console.error('録音開始エラー:', error);
+      alert('マイクへのアクセスが許可されていません');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  const uploadAudioFile = async (audioBlob: Blob) => {
+    setIsUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, `recording-${Date.now()}.webm`);
+      
+      const response = await fetch('/api/upload-audio', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('アップロードに失敗しました');
+      }
+      
+      const result = await response.json();
+      
+      // URLをテキストエリアに設定
+      setInputText(result.url);
+      
+      // 履歴に追加
+      saveToHistory(result.url);
+      
+    } catch (error) {
+      console.error('アップロードエラー:', error);
+      alert('音声ファイルのアップロードに失敗しました');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const currentQRValue = inputText.trim() || 'QRノートへようこそ！';
 
   const generateQRCode = async (text: string) => {
@@ -154,9 +230,11 @@ export default function Home() {
             <div className="relative">
               <textarea
                 id="input-text"
-                className="w-full p-4 pr-14 bg-white/90 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-cyan-400 focus:outline-none resize-none text-slate-800 placeholder-slate-500 shadow-inner"
+                className={`w-full p-4 bg-white/90 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-cyan-400 focus:outline-none resize-none text-slate-800 placeholder-slate-500 shadow-inner ${
+                  speechSupported ? 'pr-24' : 'pr-14'
+                }`}
                 rows={3}
-                placeholder="✨ Enter text or URL to generate QR code..."
+                placeholder="✨ Enter text, URL, or record audio to generate QR code..."
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
               />
@@ -165,11 +243,12 @@ export default function Home() {
               {speechSupported && (
                 <button
                   onClick={isListening ? stopListening : startListening}
-                  className={`absolute right-3 top-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  disabled={isRecording || isUploading}
+                  className={`absolute right-14 top-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
                     isListening 
                       ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
                       : 'bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600'
-                  } text-white shadow-lg`}
+                  } text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
                   title={isListening ? '音声認識を停止' : '音声入力を開始'}
                 >
                   {isListening ? (
@@ -183,13 +262,56 @@ export default function Home() {
                   )}
                 </button>
               )}
+
+              {/* 音声録音ボタン */}
+              <button
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={isListening || isUploading}
+                className={`absolute right-3 top-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  isRecording 
+                    ? 'bg-red-600 hover:bg-red-700 animate-pulse' 
+                    : isUploading
+                    ? 'bg-yellow-500 animate-spin'
+                    : 'bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600'
+                } text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
+                title={
+                  isRecording 
+                    ? '音声録音を停止' 
+                    : isUploading 
+                    ? 'アップロード中...' 
+                    : '音声を録音してS3にアップロード'
+                }
+              >
+                {isUploading ? (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z"/>
+                  </svg>
+                ) : isRecording ? (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M6 6h12v12H6z"/>
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+                  </svg>
+                )}
+              </button>
             </div>
             
-            {/* 音声認識の状態表示 */}
-            {isListening && (
+            {/* 状態表示 */}
+            {(isListening || isRecording || isUploading) && (
               <div className="mt-3 flex items-center gap-2 text-white/80 text-sm">
-                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
-                <span>音声を認識中...</span>
+                <div className={`w-2 h-2 rounded-full animate-pulse ${
+                  isListening ? 'bg-cyan-400' : 
+                  isRecording ? 'bg-red-400' : 
+                  'bg-yellow-400'
+                }`}></div>
+                <span>
+                  {isListening ? '音声を認識中...' : 
+                   isRecording ? '音声を録音中...' : 
+                   'S3にアップロード中...'}
+                </span>
               </div>
             )}
             
