@@ -1,242 +1,72 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import QRCode from 'qrcode';
+import { useState, useEffect } from 'react';
+import { useHistory } from '@/hooks/useHistory';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { useAudioRecording } from '@/hooks/useAudioRecording';
+import { useQRCodeGeneration } from '@/hooks/useQRCodeGeneration';
+import { QR_CONFIG } from '@/constants';
 
-// Web Speech API の型定義
-interface SpeechRecognitionEventResult {
-  transcript: string;
-  confidence: number;
-}
-
-interface SpeechRecognitionEventResultList {
-  [index: number]: SpeechRecognitionEventResult;
-  length: number;
-}
-
-interface SpeechRecognitionEvent extends Event {
-  results: SpeechRecognitionEventResultList[];
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-  error: string;
-}
-
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start(): void;
-  stop(): void;
-  onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
-  onend: ((this: SpeechRecognition, ev: Event) => void) | null;
-  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
-  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void) | null;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: {
-      new (): SpeechRecognition;
-    };
-    webkitSpeechRecognition?: {
-      new (): SpeechRecognition;
-    };
-  }
-}
-
-interface HistoryItem {
-  id: string;
-  text: string;
-  timestamp: number;
-}
-
+/**
+ * QRノートメインページコンポーネント
+ * テキスト、URL、音声からQRコードを生成し、デバイス間でのデータ交換を支援する
+ */
 export default function Home() {
   const [inputText, setInputText] = useState('');
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [isListening, setIsListening] = useState(false);
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
 
-  useEffect(() => {
-    const savedHistory = localStorage.getItem('qrnote-history');
-    if (savedHistory) {
-      setHistory(JSON.parse(savedHistory));
-    }
-
-    // Web Speech API サポート確認
-    if (typeof window !== 'undefined') {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        setSpeechSupported(true);
-        
-        // 音声認識の初期化
-        const recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'ja-JP'; // 日本語設定
-        
-        recognition.onstart = () => {
-          setIsListening(true);
-        };
-        
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
-          const transcript = event.results[0][0].transcript;
-          setInputText(transcript);
-          setIsListening(false);
-        };
-        
-        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-          console.error('音声認識エラー:', event.error);
-          setIsListening(false);
-        };
-        
-        recognition.onend = () => {
-          setIsListening(false);
-        };
-        
-        recognitionRef.current = recognition;
-      }
-    }
-  }, []);
-
-  const saveToHistory = (text: string) => {
-    if (!text.trim()) return;
-    
-    const newItem: HistoryItem = {
-      id: Date.now().toString(),
-      text: text.trim(),
-      timestamp: Date.now()
-    };
-    
-    const updatedHistory = [newItem, ...history.slice(0, 9)];
-    setHistory(updatedHistory);
-    localStorage.setItem('qrnote-history', JSON.stringify(updatedHistory));
-  };
-
-  const handleGenerate = () => {
-    if (inputText.trim()) {
-      saveToHistory(inputText);
-    }
-  };
-
-  const clearHistory = () => {
-    setHistory([]);
-    localStorage.removeItem('qrnote-history');
-  };
-
-  const startListening = () => {
-    if (recognitionRef.current && speechSupported) {
-      recognitionRef.current.start();
-    }
-  };
-
-  const stopListening = () => {
-    if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
-    }
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
-      });
-      
-      audioChunksRef.current = [];
-      
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-      
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        await uploadAudioFile(audioBlob);
-        
-        // ストリームを停止
-        stream.getTracks().forEach(track => track.stop());
-      };
-      
-      mediaRecorder.start();
-      mediaRecorderRef.current = mediaRecorder;
-      setIsRecording(true);
-      
-    } catch (error) {
-      console.error('録音開始エラー:', error);
-      alert('マイクへのアクセスが許可されていません');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-    }
-  };
-
-  const uploadAudioFile = async (audioBlob: Blob) => {
-    setIsUploading(true);
-    
-    try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob, `recording-${Date.now()}.webm`);
-      
-      const response = await fetch('/api/upload-audio', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error('アップロードに失敗しました');
-      }
-      
-      const result = await response.json();
-      
-      // URLをテキストエリアに設定
-      setInputText(result.url);
-      
-      // 履歴に追加
-      saveToHistory(result.url);
-      
-    } catch (error) {
+  // カスタムフックの初期化
+  const { history, addToHistory, clearHistory } = useHistory();
+  
+  const { 
+    isListening, 
+    isSupported: speechSupported, 
+    startListening, 
+    stopListening 
+  } = useSpeechRecognition({
+    onResult: (transcript) => setInputText(transcript),
+    onError: (error) => console.error('音声認識エラー:', error)
+  });
+  
+  const { 
+    isRecording, 
+    isUploading, 
+    startRecording, 
+    stopRecording 
+  } = useAudioRecording({
+    onUploadSuccess: (url) => {
+      setInputText(url);
+      addToHistory(url);
+    },
+    onUploadError: (error) => {
       console.error('アップロードエラー:', error);
       alert('音声ファイルのアップロードに失敗しました');
-    } finally {
-      setIsUploading(false);
+    }
+  });
+  
+  const { canvasRef, generateQRCode } = useQRCodeGeneration({
+    onError: (error) => console.error('QRコード生成エラー:', error)
+  });
+
+  /**
+   * QRコードの現在の値を取得
+   */
+  const currentQRValue = inputText.trim() || QR_CONFIG.DEFAULT_MESSAGE;
+
+  /**
+   * QRコード生成ボタンのハンドラー
+   */
+  const handleGenerate = () => {
+    if (inputText.trim()) {
+      addToHistory(inputText);
     }
   };
 
-  const currentQRValue = inputText.trim() || 'QRノートへようこそ！';
-
-  const generateQRCode = async (text: string) => {
-    if (!canvasRef.current) return;
-    
-    try {
-      await QRCode.toCanvas(canvasRef.current, text, {
-        width: 240,
-        margin: 2,
-        color: {
-          dark: '#1e293b',
-          light: '#ffffff'
-        },
-        errorCorrectionLevel: 'M'
-      });
-    } catch (error) {
-      console.error('QR Code generation failed:', error);
-    }
-  };
-
+  /**
+   * テキスト変更時にQRコードを自動更新
+   */
   useEffect(() => {
     generateQRCode(currentQRValue);
-  }, [currentQRValue]);
+  }, [currentQRValue, generateQRCode]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 relative overflow-hidden">
