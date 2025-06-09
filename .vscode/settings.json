@@ -1,0 +1,9 @@
+{
+	"claude-code.mcpServers": {
+		"eslint": {
+			"command": "npx",
+			"args": ["eslint", "--mcp"],
+			"env": {}
+		}
+	}
+}
