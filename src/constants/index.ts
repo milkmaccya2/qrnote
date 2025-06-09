@@ -55,5 +55,7 @@ export const AUDIO_CONFIG = {
  */
 export const API_ENDPOINTS = {
   /** 音声ファイルアップロード用のエンドポイント */
-  UPLOAD_AUDIO: '/api/upload-audio'
+  UPLOAD_AUDIO: '/api/upload-audio',
+  /** 画像ファイルアップロード用のエンドポイント */
+  UPLOAD_IMAGE: '/api/upload-image'
 } as const;

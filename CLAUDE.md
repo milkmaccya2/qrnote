@@ -140,18 +140,37 @@ AWS_S3_BUCKET_NAME=your_bucket_name
 - オブジェクト有効期限: 24時間
 - CORS設定: 必要に応じて設定
 
-## デプロイメント
+## Vercelデプロイメント
 
-### Vercel（推奨）
-1. GitHubリポジトリ連携
-2. 環境変数設定
-3. 自動デプロイメント
+### 1. GitHubリポジトリ連携
+1. [Vercel Dashboard](https://vercel.com/dashboard) にアクセス
+2. リポジトリをインポート
+3. 自動デプロイ設定完了
 
-### 手動デプロイ
-```bash
-npm run build
-npm start
+### 2. 環境変数設定
+**Vercel Dashboard で設定 (推奨):**
+1. Project Settings → Environment Variables
+2. 以下の環境変数を追加:
+
+```env
+AWS_ACCESS_KEY_ID=your_production_access_key
+AWS_SECRET_ACCESS_KEY=your_production_secret_key  
+AWS_REGION=us-east-1
+AWS_S3_BUCKET_NAME=your_production_bucket
 ```
+
+**Vercel CLI での設定:**
+```bash
+npm i -g vercel
+vercel env add AWS_ACCESS_KEY_ID
+vercel env add AWS_SECRET_ACCESS_KEY
+vercel env add AWS_REGION
+vercel env add AWS_S3_BUCKET_NAME
+```
+
+### 3. デプロイ
+- `main`ブランチへのpushで自動デプロイ
+- プレビューデプロイでPR確認
 
 ## 開発の経緯
 

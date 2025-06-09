@@ -5,6 +5,8 @@ import { useHistory } from '@/hooks/useHistory';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useAudioRecording } from '@/hooks/useAudioRecording';
 import { useQRCodeGeneration } from '@/hooks/useQRCodeGeneration';
+import { useCameraCapture } from '@/hooks/useCameraCapture';
+import { uploadImageFile } from '@/services/imageUploadService';
 import { QR_CONFIG } from '@/constants';
 
 /**
@@ -13,6 +15,8 @@ import { QR_CONFIG } from '@/constants';
  */
 export default function Home() {
   const [inputText, setInputText] = useState('');
+  const [isCameraMode, setIsCameraMode] = useState(false);
+  const [isImageUploading, setIsImageUploading] = useState(false);
 
   // カスタムフックの初期化
   const { history, addToHistory, clearHistory } = useHistory();
@@ -47,6 +51,39 @@ export default function Home() {
     onError: (error) => console.error('QRコード生成エラー:', error)
   });
 
+  const { 
+    isActive: isCameraActive,
+    isSupported: cameraSupported,
+    error: cameraError,
+    videoRef,
+    canvasRef: cameraCanvasRef,
+    startCamera,
+    stopCamera,
+    capturePhoto,
+    switchCamera,
+    cleanup: cleanupCamera
+  } = useCameraCapture({
+    onCapture: async (imageBlob) => {
+      try {
+        setIsImageUploading(true);
+        const result = await uploadImageFile(imageBlob);
+        setInputText(result.url);
+        addToHistory(result.url);
+        setIsCameraMode(false);
+        stopCamera();
+      } catch (error) {
+        console.error('画像アップロードエラー:', error);
+        alert('画像のアップロードに失敗しました');
+      } finally {
+        setIsImageUploading(false);
+      }
+    },
+    onError: (error) => {
+      console.error('カメラエラー:', error);
+      alert(error);
+    }
+  });
+
   /**
    * QRコードの現在の値を取得
    */
@@ -62,11 +99,44 @@ export default function Home() {
   };
 
   /**
+   * カメラモードの切り替え
+   */
+  const toggleCameraMode = () => {
+    if (isCameraMode) {
+      setIsCameraMode(false);
+      stopCamera();
+    } else {
+      setIsCameraMode(true);
+      if (cameraSupported) {
+        startCamera();
+      }
+    }
+  };
+
+  /**
+   * 写真撮影ハンドラー
+   */
+  const handleCapturePhoto = async () => {
+    if (isCameraActive) {
+      await capturePhoto();
+    }
+  };
+
+  /**
    * テキスト変更時にQRコードを自動更新
    */
   useEffect(() => {
     generateQRCode(currentQRValue);
   }, [currentQRValue, generateQRCode]);
+
+  /**
+   * コンポーネントアンマウント時のクリーンアップ
+   */
+  useEffect(() => {
+    return () => {
+      cleanupCamera();
+    };
+  }, [cleanupCamera]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 relative overflow-hidden">
@@ -99,10 +169,10 @@ export default function Home() {
               <textarea
                 id="input-text"
                 className={`w-full p-4 bg-white/90 backdrop-blur-sm border-0 rounded-2xl focus:ring-2 focus:ring-cyan-400 focus:outline-none resize-none text-slate-800 placeholder-slate-500 shadow-inner ${
-                  speechSupported ? 'pr-24' : 'pr-14'
+                  speechSupported ? 'pr-32' : 'pr-24'
                 }`}
                 rows={3}
-                placeholder="✨ Enter text, URL, or record audio to generate QR code..."
+                placeholder="✨ Enter text, URL, record audio, or capture photo to generate QR code..."
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
               />
@@ -111,8 +181,8 @@ export default function Home() {
               {speechSupported && (
                 <button
                   onClick={isListening ? stopListening : startListening}
-                  disabled={isRecording || isUploading}
-                  className={`absolute right-14 top-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  disabled={isRecording || isUploading || isCameraMode}
+                  className={`absolute right-24 top-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
                     isListening 
                       ? 'bg-red-500 hover:bg-red-600 animate-pulse' 
                       : 'bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600'
@@ -134,8 +204,8 @@ export default function Home() {
               {/* 音声録音ボタン */}
               <button
                 onClick={isRecording ? stopRecording : startRecording}
-                disabled={isListening || isUploading}
-                className={`absolute right-3 top-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                disabled={isListening || isUploading || isCameraMode}
+                className={`absolute right-14 top-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
                   isRecording 
                     ? 'bg-red-600 hover:bg-red-700 animate-pulse' 
                     : isUploading
@@ -165,19 +235,39 @@ export default function Home() {
                   </svg>
                 )}
               </button>
+
+              {/* カメラボタン */}
+              <button
+                onClick={toggleCameraMode}
+                disabled={isListening || isRecording || isUploading || isImageUploading}
+                className={`absolute right-3 top-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                  isCameraMode
+                    ? 'bg-green-600 hover:bg-green-700' 
+                    : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'
+                } text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
+                title={isCameraMode ? 'カメラを閉じる' : 'カメラで撮影'}
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 15.2l3.2-2.7L12 9.8l-3.2 2.7L12 15.2zM9 2l1.17 1H14v0l1.17-1H18c1.1 0 2 .9 2 2v16c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h3zm6 17.5c3.31 0 6-2.69 6-6s-2.69-6-6-6-6 2.69-6 6 2.69 6 6 6zM12 8c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5z"/>
+                </svg>
+              </button>
             </div>
             
             {/* 状態表示 */}
-            {(isListening || isRecording || isUploading) && (
+            {(isListening || isRecording || isUploading || isCameraMode || isImageUploading) && (
               <div className="mt-3 flex items-center gap-2 text-white/80 text-sm">
                 <div className={`w-2 h-2 rounded-full animate-pulse ${
                   isListening ? 'bg-cyan-400' : 
                   isRecording ? 'bg-red-400' : 
+                  isCameraMode ? 'bg-green-400' :
+                  isImageUploading ? 'bg-blue-400' :
                   'bg-yellow-400'
                 }`}></div>
                 <span>
                   {isListening ? '音声を認識中...' : 
                    isRecording ? '音声を録音中...' : 
+                   isCameraMode ? 'カメラ撮影モード' :
+                   isImageUploading ? '画像をアップロード中...' :
                    'S3にアップロード中...'}
                 </span>
               </div>
@@ -202,6 +292,81 @@ export default function Home() {
             </span>
           </button>
         </div>
+
+        {/* カメラプレビューエリア */}
+        {isCameraMode && (
+          <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 mb-8 shadow-2xl">
+            <div className="flex flex-col items-center">
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-green-400 via-blue-400 to-indigo-400 rounded-3xl blur opacity-30 group-hover:opacity-50 transition duration-300"></div>
+                <div className="relative bg-black rounded-2xl overflow-hidden shadow-xl">
+                  {cameraSupported && !cameraError ? (
+                    <video
+                      ref={videoRef}
+                      className="w-full max-w-md h-auto rounded-lg"
+                      autoPlay
+                      playsInline
+                      muted
+                    />
+                  ) : (
+                    <div className="w-full max-w-md h-48 flex items-center justify-center text-white/60">
+                      <div className="text-center">
+                        <svg className="w-12 h-12 mx-auto mb-2 opacity-50" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 15.2l3.2-2.7L12 9.8l-3.2 2.7L12 15.2zM9 2l1.17 1H14v0l1.17-1H18c1.1 0 2 .9 2 2v16c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h3z"/>
+                        </svg>
+                        <p className="text-sm">
+                          {cameraError || 'カメラを起動中...'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* カメラコントロール */}
+              {isCameraActive && (
+                <div className="mt-6 flex gap-4">
+                  <button
+                    onClick={handleCapturePhoto}
+                    disabled={isImageUploading}
+                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-2xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {isImageUploading ? (
+                      <>
+                        <svg className="w-5 h-5 animate-spin" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 4V2A10 10 0 0 0 2 12h2a8 8 0 0 1 8-8z"/>
+                        </svg>
+                        アップロード中...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="3"/>
+                          <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+                        </svg>
+                        写真を撮影
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={switchCamera}
+                    disabled={isImageUploading}
+                    className="px-4 py-3 bg-white/20 backdrop-blur-sm text-white rounded-2xl hover:bg-white/30 transition-all duration-300 font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="カメラを切り替え"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M20 4h-3.17L15 2H9L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zM9 16l5.5-4L12 10.5 8.5 12 9 16zm0-6l2.5-2L9 6l-2.5 2L9 10z"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            {/* 隠しキャンバス（写真撮影用） */}
+            <canvas ref={cameraCanvasRef} className="hidden" />
+          </div>
+        )}
 
         <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8 mb-8 shadow-2xl">
           <div className="flex flex-col items-center">

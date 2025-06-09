@@ -147,3 +147,35 @@ export interface UseHistoryOptions {
   /** ローカルストレージのキー */
   storageKey?: string;
 }
+
+/**
+ * useCameraCapture フックのオプション
+ */
+export interface UseCameraCaptureOptions {
+  /** 写真撮影成功時のコールバック */
+  onCapture?: (imageBlob: Blob) => void;
+  /** エラー発生時のコールバック */
+  onError?: (error: string) => void;
+  /** キャプチャする画像の幅 */
+  width?: number;
+  /** キャプチャする画像の高さ */
+  height?: number;
+  /** カメラの向き（'user': 前面カメラ, 'environment': 背面カメラ） */
+  facingMode?: 'user' | 'environment';
+}
+
+/**
+ * 画像ファイルアップロードの結果
+ */
+export interface ImageUploadResult {
+  /** アップロードが成功したかどうか */
+  success: boolean;
+  /** アップロードされた画像の公開URL */
+  url: string;
+  /** 署名付きURL */
+  signedUrl: string;
+  /** アップロードされたファイル名 */
+  fileName: string;
+  /** URL の有効期限 */
+  expiresAt: string;
+}
