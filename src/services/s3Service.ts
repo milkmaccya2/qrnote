@@ -112,7 +112,7 @@ export function getAWSErrorDetails(error: unknown): {
   return {
     message: error instanceof Error ? error.message : 'Unknown error',
     name: error instanceof Error ? error.name : 'Unknown',
-    code: awsError.code,
-    statusCode: awsError.statusCode,
+    code: awsError?.code,
+    statusCode: awsError?.statusCode,
   };
 }
