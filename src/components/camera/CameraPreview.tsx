@@ -1,4 +1,4 @@
-import { RefObject } from 'react';
+import { RefObject, useState, useEffect } from 'react';
 
 interface CameraPreviewProps {
   isVisible: boolean;
@@ -25,11 +25,57 @@ export default function CameraPreview({
   onSwitchCamera, 
   cameraProps 
 }: CameraPreviewProps) {
+  const [showFlash, setShowFlash] = useState(false);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+
+  const { isActive, isSupported, error, videoRef, canvasRef } = cameraProps;
+
+  // フラッシュ効果を自動的に非表示にする
+  useEffect(() => {
+    if (!showFlash) return;
+    
+    const timer = setTimeout(() => {
+      setShowFlash(false);
+    }, 200);
+    
+    return () => clearTimeout(timer);
+  }, [showFlash]);
+
+  // カメラモードを閉じたときにプレビューをクリア
+  useEffect(() => {
+    if (!isVisible) {
+      setCapturedImage(null);
+    }
+  }, [isVisible]);
+
   if (!isVisible) {
     return null;
   }
 
-  const { isActive, isSupported, error, videoRef, canvasRef } = cameraProps;
+  const handleCapture = async () => {
+    // フラッシュ効果を表示
+    setShowFlash(true);
+    
+    // キャンバスから画像を取得してプレビュー用に保存
+    if (canvasRef.current && videoRef.current) {
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      const context = canvas.getContext('2d');
+      
+      if (context && video.videoWidth && video.videoHeight) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // プレビュー用の画像URLを生成
+        const imageUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setCapturedImage(imageUrl);
+      }
+    }
+    
+    // 元のキャプチャ処理を実行
+    onCapture();
+  };
 
   return (
     <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-6 mb-8 shadow-2xl">
@@ -64,7 +110,7 @@ export default function CameraPreview({
         {isActive && (
           <div className="mt-6 flex gap-4">
             <button
-              onClick={onCapture}
+              onClick={handleCapture}
               disabled={isUploading}
               className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-2xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
@@ -100,8 +146,29 @@ export default function CameraPreview({
         )}
       </div>
       
+      {/* 撮影した画像のプレビュー */}
+      {capturedImage && !isUploading && (
+        <div className="mt-4 flex justify-center">
+          <div className="relative">
+            <img 
+              src={capturedImage} 
+              alt="撮影した画像" 
+              className="w-24 h-24 rounded-xl object-cover shadow-lg ring-2 ring-white/30"
+            />
+            <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+              撮影済み
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* 隠しキャンバス（写真撮影用） */}
       <canvas ref={canvasRef} className="hidden" />
+      
+      {/* フラッシュ効果 */}
+      {showFlash && (
+        <div className="fixed inset-0 bg-white pointer-events-none z-50 animate-flash" />
+      )}
     </div>
   );
 }
